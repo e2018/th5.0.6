@@ -89,6 +89,48 @@ class TeacherController extends Controller
 		return $this->success('删除成功',url('index'));
 	}
 	
+	//编辑数据
+	public function edit()
+	{
+		//获取传入ID
+		$id = Request::instance()->param('id/d');
+		
+		//在Teacher表模型中获取当前记录
+		if (is_null($Teacher = Teacher::get($id))) {
+			return '系统未找到ID为' . $id . '的记录';
+		};
+		
+		//将数据传给V层
+		$this->assign('Teacher' , $Teacher);
+		
+		//获取封装好的V层内容
+		$htmls = $this->fetch();
+		
+		//将封装好的V层内容返回给用户
+		return $htmls;
+	}
+	
+	//更新数据
+	public function update()
+	{
+		//接收数据
+		$teacher = Request::instance()->post();
+		
+		//将数据存入Teacher表
+		$Teacher = new Teacher();
+		$message = '更新成功';
+		
+		//依据状态定制提示信息
+		try{
+			if (false === $Teacher->validate(true)->isUpdate()->save($teacher)) {
+				$message = '更新失败：' . $Teacher->getMessage();
+			}
+		} catch (\Exception $e) {
+			$message = '更新失败：' . $e->getMessage();
+		}
+		return $message;
+	}
+	
 	//测试专用
 	public function test()
 	{
