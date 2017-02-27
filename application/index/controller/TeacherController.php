@@ -12,23 +12,33 @@ class TeacherController extends Controller
 {
 	public function index()
 	{
-		$Teacher = new Teacher;
-		$teachers = $Teacher->select();
+		try{
+			$Teacher = new Teacher;
+			$teachers = $Teacher->select();
 		
-		//向V层传数据
-		$this->assign('teachers' , $teachers);
+			//向V层传数据
+			$this->assign('teachers' , $teachers);
 		
-		//取回打包后的数据
-		$htmls = $this->fetch();
+			//取回打包后的数据
+			$htmls = $this->fetch();
 		
-		//将数据返回给用户
-		return $htmls;
+			//将数据返回给用户
+			return $htmls;
+		} catch (\Exception $e) {
+			//由于对异常进行处理，如果发生错误，我们仍然需要查看具体的异常位置及信息，那么需要将以下代码的注释去掉。
+			//throw $e;
+			return '系统错误' . $e->getMessage();
+		}
 	}
 	
 	public function add()
 	{
-		$htmls = $this->fetch();
-		return $htmls;
+		try{
+			$htmls = $this->fetch();
+			return $htmls;
+		} catch (\Exception $e) {
+			return '系统错误' . $e->getMessage();
+		}
 	}
 	
 	/**
@@ -39,54 +49,77 @@ class TeacherController extends Controller
 	*/
 	public function insert()
 	{
-		//接收传入数据
-		$postData = Request::instance()->post();
-		
-		//实例化Teacher空对象
-		$Teacher = new Teacher();
-		
-		//为对象赋值
-		$Teacher->name = $postData['name'];
-		$Teacher->username = $postData['username'];
-		$Teacher->sex = $postData['sex'];
-		$Teacher->email = $postData['email'];
-		//$Teacher->create_time = time();
-		
-		//新增对象至数据表
-		$result = $Teacher->validate(true)->save($Teacher->getData());
-		
-		//反馈结果
-		if (false === $result)
-		{
-			return '新增失败：' . $Teacher->getError();
-		} else {
-			return '新增成功。新增ID为:' . $Teacher->id;
+		//提示信息
+		$message = '';
+		try{
+			//接收传入数据
+			$postData = Request::instance()->post();
+			
+			//实例化Teacher空对象
+			$Teacher = new Teacher();
+			
+			//为对象赋值
+			$Teacher->name = $postData['name'];
+			$Teacher->username = $postData['username'];
+			$Teacher->sex = $postData['sex'];
+			$Teacher->email = $postData['email'];
+			//$Teacher->create_time = time();
+			
+			//新增对象至数据表
+			$result = $Teacher->validate(true)->save($Teacher->getData());
+			
+			//反馈结果
+			if (false === $result)
+			{
+				return '新增失败：' . $Teacher->getError();
+			} else {
+				//提示操作成功，并跳转至教师管理列表
+				return $this->success('用户' . $Teacher->name . '新增成功。' , url('index'));
+			}
+		} catch (\Exception $e) {
+			//发生异常
+			return $e->getMessage();
 		}
+		
+		return $this->error($message);
 	}
 	
 	public function delete()
 	{
-		//获取get数据
-		$id = Request::instance()->param('id/d');
-		if (is_null($id) || 0 === $id) {
-			return $this->error('未获取到ID信息');
+		try{
+			//获取get数据
+			$Request = Request::instance();
+			$id = Request::instance()->param('id/d');
+			
+			//判断是否成功接收
+			if (0 === $id) {
+				throw new \Exception("未获取到ID信息",1);
+			}
+			
+			
+			//获取要删除的对象
+			$Teacher = Teacher::get($id);
+		
+			//判断要删除的对象是否存在
+			if(is_null($Teacher)){
+				throw new \Exception('不存在id为' . $id . '的教师，删除失败', 1);
+			}
+			
+			//删除对象
+			if(!$Teacher->delete()){
+				$message = '删除失败：' . $Teacher->getError();
+			}
+			
+		//获取到thinkphp内置异常时，直接向上抛出，交给thinkphp处理
+		} catch (\think\Exception\HttpResponseException $e) {
+			throw $e;
+		//获取到正常的异常时，输出异常
+		} catch (\Exception $e) {
+			return $e->getMessage();
 		}
 		
-		
-		//获取要删除的对象
-		$Teacher = Teacher::get($id);
-	
-		//要删除的对象存在
-		if(is_null($Teacher)){
-			return $this->error('删除失败：' . $id . '的教师，删除失败');
-		}
-		//删除对象
-		if(!$Teacher->delete()){
-			return $this->error('删除失败：' . $Teacher->getError());
-		}
-	
 		//进行跳转
-		return $this->success('删除成功',url('index'));
+		return $this->success('删除成功',$Request->header('referer'));
 	}
 	
 	//编辑数据
